@@ -6,6 +6,10 @@ import lesson5.dto.Product;
 import lesson5.utils.RetrofitUtils;
 import lombok.SneakyThrows;
 import okhttp3.ResponseBody;
+import org.apache.ibatis.io.Resources;
+import org.apache.ibatis.session.SqlSession;
+import org.apache.ibatis.session.SqlSessionFactory;
+import org.apache.ibatis.session.SqlSessionFactoryBuilder;
 import org.hamcrest.CoreMatchers;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
@@ -14,6 +18,8 @@ import org.junit.jupiter.api.Test;
 import retrofit2.Response;
 
 import java.io.IOException;
+import java.io.InputStream;
+import java.util.List;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
@@ -78,8 +84,28 @@ public class ModifyProductTest {
     @SneakyThrows
     @AfterEach
     void tearDown() {
-        Response<ResponseBody> response = productService.deleteProduct(id).execute();
-        assertThat(response.isSuccessful(), CoreMatchers.is(true));
+        SqlSession session=null;
+        String resource="mybatis-config.xml";
+        InputStream inputStream= Resources.getResourceAsStream(resource);
+        SqlSessionFactory sqlSessionFactory=new SqlSessionFactoryBuilder().build(inputStream);
+        session=sqlSessionFactory.openSession();
+        db.dao.ProductsMapper productsMapper=session.getMapper(db.dao.ProductsMapper.class);
+        long myLong = id;
+        db.model.ProductsExample example = new db.model.ProductsExample();
+
+        example.createCriteria().andIdEqualTo(myLong);
+        List<db.model.Products> list = productsMapper.selectByExample(example);
+
+        System.out.println(list.get(0).getTitle());
+        assertThat(list.get(0).getTitle(), equalTo("newFood"));
+        System.out.println(list.get(0).getPrice());
+        assertThat(list.get(0).getPrice(), equalTo(999));
+        System.out.println(list.get(0).getCategory_id());
+        assertThat(list.get(0).getCategory_id(), equalTo(2L));
+
+        productsMapper.deleteByPrimaryKey(myLong);
+        session.commit();
+        session.close();
     }
 
 

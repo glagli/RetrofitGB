@@ -6,6 +6,10 @@ import lesson5.dto.Product;
 import lesson5.utils.RetrofitUtils;
 import lombok.SneakyThrows;
 import okhttp3.ResponseBody;
+import org.apache.ibatis.io.Resources;
+import org.apache.ibatis.session.SqlSession;
+import org.apache.ibatis.session.SqlSessionFactory;
+import org.apache.ibatis.session.SqlSessionFactoryBuilder;
 import org.hamcrest.CoreMatchers;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
@@ -14,6 +18,8 @@ import org.junit.jupiter.api.Test;
 import retrofit2.Response;
 
 import java.io.IOException;
+import java.io.InputStream;
+import java.util.List;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
@@ -58,9 +64,18 @@ public class DeleteProductTest {
         Response<ResponseBody> response = productService.deleteProduct(id).execute();
         assertThat(response.isSuccessful(), CoreMatchers.is(true));
 
-        Response<Product> response2 = productService.getProductById(id).execute();
-        assertThat(response2.isSuccessful(), CoreMatchers.is(false));
+        SqlSession session=null;
+        String resource="mybatis-config.xml";
+        InputStream inputStream=Resources.getResourceAsStream(resource);
+        SqlSessionFactory sqlSessionFactory=new SqlSessionFactoryBuilder().build(inputStream);
+        session=sqlSessionFactory.openSession();
+        db.dao.ProductsMapper productsMapper=session.getMapper(db.dao.ProductsMapper.class);
 
+        db.model.ProductsExample example = new db.model.ProductsExample();
+        long myLong = id;
+        example.createCriteria().andIdEqualTo(myLong);
+
+        assertThat(productsMapper.countByExample(example), equalTo(0L));
     }
 
 
